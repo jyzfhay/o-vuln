@@ -9,7 +9,11 @@ function loadReport() {
     
     if (!report) {
         document.getElementById('report-subtitle').textContent = 'Report not found';
-        document.getElementById('stats-container').innerHTML = '<div class="error">Report not found</div>';
+        const statsEl = document.getElementById('stats-container');
+        const errEl = document.createElement('div');
+        errEl.className = 'error';
+        errEl.textContent = 'Report not found';
+        statsEl.appendChild(errEl);
         return;
     }
     

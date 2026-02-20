@@ -129,8 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function clearResults() {
     document.getElementById('results-panel').style.display = 'none';
-    document.getElementById('stats-container').innerHTML = '';
-    document.getElementById('findings-container').innerHTML = '';
+    const statsEl = document.getElementById('stats-container');
+    const findingsEl = document.getElementById('findings-container');
+    while (statsEl.firstChild) statsEl.removeChild(statsEl.firstChild);
+    while (findingsEl.firstChild) findingsEl.removeChild(findingsEl.firstChild);
     window.currentScanData = null;
 }
 

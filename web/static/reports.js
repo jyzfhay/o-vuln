@@ -10,52 +10,90 @@ function loadReports() {
         .sort((a, b) => new Date(b.generated_at || b.saved_at) - new Date(a.generated_at || a.saved_at));
     
     const container = document.getElementById('reports-list');
-    
+    container.replaceChildren();
+
     if (reportList.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>No reports yet</h3>
-                <p>Run a scan to generate your first report.</p>
-                <a href="/scan" class="btn-primary">Run Scan</a>
-            </div>
-        `;
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        const h3 = document.createElement('h3');
+        h3.textContent = 'No reports yet';
+        const p = document.createElement('p');
+        p.textContent = 'Run a scan to generate your first report.';
+        const a = document.createElement('a');
+        a.href = '/scan';
+        a.className = 'btn-primary';
+        a.textContent = 'Run Scan';
+        empty.appendChild(h3);
+        empty.appendChild(p);
+        empty.appendChild(a);
+        container.appendChild(empty);
         return;
     }
-    
-    container.innerHTML = reportList.map(report => {
+
+    reportList.forEach(report => {
         const date = report.generated_at || report.saved_at;
         const counts = report.severity_counts || {};
         const total = report.total_findings || 0;
         const mode = report.mode || 'all';
         const path = report.path || 'N/A';
-        
-        return `
-            <div class="report-item">
-                <div class="report-item-header">
-                    <div>
-                        <h3><a href="/report/${report.id}">${report.id.substring(0, 12)}</a></h3>
-                        <p class="report-meta">
-                            <span>${mode.toUpperCase()}</span>
-                            <span>·</span>
-                            <span>${path}</span>
-                            <span>·</span>
-                            <span>${formatDate(date)}</span>
-                        </p>
-                    </div>
-                    <div class="report-actions">
-                        <button class="btn-secondary" onclick="deleteReport('${report.id}')">Delete</button>
-                    </div>
-                </div>
-                <div class="report-stats">
-                    <div class="stat-mini total">Total: ${total}</div>
-                    ${counts.CRITICAL ? `<div class="stat-mini critical">Critical: ${counts.CRITICAL}</div>` : ''}
-                    ${counts.HIGH ? `<div class="stat-mini high">High: ${counts.HIGH}</div>` : ''}
-                    ${counts.MEDIUM ? `<div class="stat-mini medium">Medium: ${counts.MEDIUM}</div>` : ''}
-                    ${counts.LOW ? `<div class="stat-mini low">Low: ${counts.LOW}</div>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
+        const item = document.createElement('div');
+        item.className = 'report-item';
+        const header = document.createElement('div');
+        header.className = 'report-item-header';
+        const left = document.createElement('div');
+        const h3 = document.createElement('h3');
+        const link = document.createElement('a');
+        link.href = '/report/' + encodeURIComponent(report.id);
+        link.textContent = report.id.substring(0, 12);
+        h3.appendChild(link);
+        const meta = document.createElement('p');
+        meta.className = 'report-meta';
+        meta.textContent = mode.toUpperCase() + ' · ' + path + ' · ' + formatDate(date);
+        left.appendChild(h3);
+        left.appendChild(meta);
+        const actions = document.createElement('div');
+        actions.className = 'report-actions';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-secondary';
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => deleteReport(report.id);
+        actions.appendChild(delBtn);
+        header.appendChild(left);
+        header.appendChild(actions);
+        item.appendChild(header);
+        const stats = document.createElement('div');
+        stats.className = 'report-stats';
+        const totalDiv = document.createElement('div');
+        totalDiv.className = 'stat-mini total';
+        totalDiv.textContent = 'Total: ' + total;
+        stats.appendChild(totalDiv);
+        if (counts.CRITICAL) {
+            const d = document.createElement('div');
+            d.className = 'stat-mini critical';
+            d.textContent = 'Critical: ' + counts.CRITICAL;
+            stats.appendChild(d);
+        }
+        if (counts.HIGH) {
+            const d = document.createElement('div');
+            d.className = 'stat-mini high';
+            d.textContent = 'High: ' + counts.HIGH;
+            stats.appendChild(d);
+        }
+        if (counts.MEDIUM) {
+            const d = document.createElement('div');
+            d.className = 'stat-mini medium';
+            d.textContent = 'Medium: ' + counts.MEDIUM;
+            stats.appendChild(d);
+        }
+        if (counts.LOW) {
+            const d = document.createElement('div');
+            d.className = 'stat-mini low';
+            d.textContent = 'Low: ' + counts.LOW;
+            stats.appendChild(d);
+        }
+        item.appendChild(stats);
+        container.appendChild(item);
+    });
 }
 
 function deleteReport(reportId) {
