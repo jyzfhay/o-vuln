@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<header>
+    <div class="header-content">
+        <h1>Dashboard</h1>
+        <p class="subtitle">Overview of your vulnerability scans</p>
+    </div>
+</header>
+
+<main>
+    <div class="dashboard-grid">
+        <div class="dashboard-card quick-stats">
+            <h2>Quick Stats</h2>
+            <div class="stats-grid">
+                <div class="stat-card total">
+                    <div class="label">Total Scans</div>
+                    <div class="value" id="total-scans">0</div>
+                </div>
+                <div class="stat-card critical">
+                    <div class="label">Critical Findings</div>
+                    <div class="value" id="total-critical">0</div>
+                </div>
+                <div class="stat-card high">
+                    <div class="label">High Findings</div>
+                    <div class="value" id="total-high">0</div>
+                </div>
+                <div class="stat-card medium">
+                    <div class="label">Medium Findings</div>
+                    <div class="value" id="total-medium">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card quick-actions">
+            <h2>Quick Actions</h2>
+            <div class="action-buttons">
+                <a href="/scan" class="btn-primary">New Scan</a>
+                <a href="/reports" class="btn-secondary">View Reports</a>
+            </div>
+            <div class="api-info">
+                <h3>CI/CD Integration</h3>
+                <p>Use the API endpoints for automation:</p>
+                <code class="api-endpoint">POST /api/scan</code>
+                <code class="api-endpoint">GET /api/health</code>
+                <small>See <a href="/api/docs" style="color: var(--primary);">API documentation</a> for details</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card recent-scans">
+        <div class="card-header">
+            <h2>Recent Scans</h2>
+            <a href="/reports" class="btn-secondary">View All</a>
+        </div>
+        <div id="recent-scans-list" class="scans-list">
+            <div class="empty-state">
+                <p>No scans yet. <a href="/scan">Run your first scan</a></p>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/dashboard.js"></script>
+{% endblock %}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VulnScan{% endblock %} - Security Vulnerability Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <span class="logo-text">VulnScan</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link" id="nav-dashboard">Dashboard</a>
+                <a href="/scan" class="nav-link" id="nav-scan">New Scan</a>
+                <a href="/reports" class="nav-link" id="nav-reports">Reports</a>
+                <a href="/api/docs" class="nav-link" id="nav-api">API Docs</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <p>VulnScan · CVE data from NVD, OSV, and MITRE</p>
+        <p class="legal">⚠️ Only scan systems you own or have explicit written authorization to test.</p>
+    </footer>
+
+    <script src="/static/common.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

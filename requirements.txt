@@ -3,3 +3,6 @@ requests>=2.31
 rich>=13.0
 # Python < 3.11 needs tomli for pyproject.toml parsing
 tomli>=2.0; python_version < "3.11"
+# Web interface dependencies
+flask>=3.0.0
+flask-cors>=4.0.0

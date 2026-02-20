@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Report {{ report_id }}{% endblock %}
+
+{% block content %}
+<header>
+    <div class="header-content">
+        <h1>Scan Report</h1>
+        <p class="subtitle" id="report-subtitle">Loading...</p>
+    </div>
+</header>
+
+<main>
+    <div class="report-view-panel">
+        <div class="results-header">
+            <h2 id="report-title">Report Details</h2>
+            <div class="results-actions">
+                <button class="btn-secondary" onclick="downloadReport()">Download JSON</button>
+                <button class="btn-secondary" onclick="window.history.back()">Back</button>
+            </div>
+        </div>
+
+        <div id="stats-container"></div>
+        <div id="findings-container"></div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const reportId = '{{ report_id }}';
+</script>
+<script src="/static/report_view.js"></script>
+{% endblock %}
