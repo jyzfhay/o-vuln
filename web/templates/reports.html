@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<header>
+    <div class="header-content">
+        <h1>Scan Reports</h1>
+        <p class="subtitle">View and manage your vulnerability scan history</p>
+    </div>
+</header>
+
+<main>
+    <div class="reports-panel">
+        <div class="card-header">
+            <h2>All Reports</h2>
+            <div class="header-actions">
+                <button class="btn-secondary" onclick="clearAllReports()">Clear All</button>
+                <a href="/scan" class="btn-primary">New Scan</a>
+            </div>
+        </div>
+
+        <div id="reports-list" class="reports-list">
+            <div class="empty-state">
+                <h3>No reports yet</h3>
+                <p>Run a scan to generate your first report.</p>
+                <a href="/scan" class="btn-primary">Run Scan</a>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/reports.js"></script>
+{% endblock %}

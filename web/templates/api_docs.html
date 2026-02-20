@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation{% endblock %}
+
+{% block content %}
+<header>
+    <div class="header-content">
+        <h1>API Documentation</h1>
+        <p class="subtitle">REST API for CI/CD integration and automation</p>
+    </div>
+</header>
+
+<main>
+    <div class="api-docs-panel">
+        <div class="api-intro">
+            <p>VulnScan provides a RESTful API for programmatic access. All endpoints return JSON and support standard HTTP methods.</p>
+            <p><strong>Base URL:</strong> <code class="api-endpoint">{{ request.url_root }}api</code></p>
+        </div>
+
+        <div class="api-endpoint-section">
+            <h2>POST /api/scan</h2>
+            <p class="endpoint-description">Execute a vulnerability scan. This is the main endpoint for running scans programmatically.</p>
+            
+            <h3>Request</h3>
+            <div class="code-block">
+                <pre><code>POST /api/scan
+Content-Type: application/json
+
+{
+  "scan": "all|deps|sast|net",
+  "path": ".",
+  "targets": ["192.168.1.1"],
+  "net_targets": ["192.168.1.1"],
+  "ports": "22,80,443",
+  "tools": "auto|all|none|semgrep,bandit,trivy,nmap,nuclei",
+  "timeout": 1.5
+}</code></pre>
+            </div>
+
+            <h3>Parameters</h3>
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>scan</code></td>
+                        <td>string</td>
+                        <td>Yes</td>
+                        <td>Scan type: <code>all</code>, <code>deps</code>, <code>sast</code>, or <code>net</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>path</code></td>
+                        <td>string</td>
+                        <td>No*</td>
+                        <td>Target path to scan (default: <code>"."</code>). Required for deps/sast/all scans.</td>
+                    </tr>
+                    <tr>
+                        <td><code>targets</code></td>
+                        <td>array</td>
+                        <td>Yes**</td>
+                        <td>Network targets (hosts, IPs, CIDR). Required when <code>scan: "net"</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>net_targets</code></td>
+                        <td>array</td>
+                        <td>No</td>
+                        <td>Optional network targets when <code>scan: "all"</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>ports</code></td>
+                        <td>string</td>
+                        <td>No</td>
+                        <td>Comma-separated port list (e.g., <code>"22,80,443"</code>) or array of integers.</td>
+                    </tr>
+                    <tr>
+                        <td><code>tools</code></td>
+                        <td>string</td>
+                        <td>No</td>
+                        <td>Tools to use: <code>auto</code> (default), <code>all</code>, <code>none</code>, or comma-separated list.</td>
+                    </tr>
+                    <tr>
+                        <td><code>timeout</code></td>
+                        <td>number</td>
+                        <td>No</td>
+                        <td>TCP timeout in seconds (default: <code>1.5</code>).</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="note">* Required for deps/sast/all scans<br>** Required for network scans</p>
+
+            <h3>Response</h3>
+            <div class="code-block">
+                <pre><code>{
+  "generated_at": "2026-02-20T16:00:00Z",
+  "mode": "all",
+  "path": ".",
+  "targets": [],
+  "tools_requested": "auto",
+  "tools_enabled": ["trivy", "semgrep"],
+  "timeout": 1.5,
+  "total_findings": 5,
+  "severity_counts": {
+    "CRITICAL": 1,
+    "HIGH": 2,
+    "MEDIUM": 2,
+    "LOW": 0,
+    "INFO": 0
+  },
+  "findings": [
+    {
+      "title": "Vulnerable dependency",
+      "description": "...",
+      "scanner": "dependency",
+      "severity": "CRITICAL",
+      "location": "requirements.txt",
+      "line_number": 42,
+      "evidence": "...",
+      "remediation": "...",
+      "cve_refs": [
+        {
+          "cve_id": "CVE-2024-1234",
+          "description": "...",
+          "cvss_score": 9.8,
+          "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "severity": "CRITICAL",
+          "nvd_url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1234",
+          "mitre_url": "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-1234",
+          "published": "2024-01-15",
+          "fixed_versions": ["2.0.0"]
+        }
+      ]
+    }
+  ]
+}</code></pre>
+            </div>
+
+            <h3>Example Requests</h3>
+            
+            <div class="example-section">
+                <h4>Dependency Scan</h4>
+                <div class="code-block">
+                    <pre><code>curl -X POST {{ request.url_root }}api/scan \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "scan": "deps",
+    "path": "./my-project",
+    "tools": "auto"
+  }'</code></pre>
+                </div>
+            </div>
+
+            <div class="example-section">
+                <h4>SAST Scan</h4>
+                <div class="code-block">
+                    <pre><code>curl -X POST {{ request.url_root }}api/scan \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "scan": "sast",
+    "path": "./src",
+    "tools": "semgrep,bandit"
+  }'</code></pre>
+                </div>
+            </div>
+
+            <div class="example-section">
+                <h4>Network Scan</h4>
+                <div class="code-block">
+                    <pre><code>curl -X POST {{ request.url_root }}api/scan \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "scan": "net",
+    "targets": ["192.168.1.1", "10.0.0.0/24"],
+    "ports": "22,80,443,3306",
+    "tools": "nmap,nuclei"
+  }'</code></pre>
+                </div>
+            </div>
+
+            <div class="example-section">
+                <h4>All-in-One Scan</h4>
+                <div class="code-block">
+                    <pre><code>curl -X POST {{ request.url_root }}api/scan \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "scan": "all",
+    "path": "./my-project",
+    "net_targets": ["192.168.1.1"],
+    "ports": [22, 80, 443],
+    "tools": "auto",
+    "timeout": 2.0
+  }'</code></pre>
+                </div>
+            </div>
+
+            <h3>CI/CD Integration Example</h3>
+            <div class="example-section">
+                <h4>GitHub Actions</h4>
+                <div class="code-block">
+                    <pre><code>name: Security Scan
+
+on: [push, pull_request]
+
+jobs:
+  vulnscan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run VulnScan
+        run: |
+          curl -X POST http://your-server:8080/api/scan \\
+            -H "Content-Type: application/json" \\
+            -d '{"scan": "all", "path": "."}' \\
+            -o scan-results.json
+      
+      - name: Check for critical findings
+        run: |
+          CRITICAL=$(jq '.severity_counts.CRITICAL // 0' scan-results.json)
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "Found $CRITICAL critical vulnerabilities"
+            exit 1
+          fi</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-endpoint-section">
+            <h2>GET /api/health</h2>
+            <p class="endpoint-description">Health check endpoint for monitoring and load balancers.</p>
+            
+            <h3>Request</h3>
+            <div class="code-block">
+                <pre><code>GET /api/health</code></pre>
+            </div>
+
+            <h3>Response</h3>
+            <div class="code-block">
+                <pre><code>{
+  "status": "ok"
+}</code></pre>
+            </div>
+
+            <h3>Example</h3>
+            <div class="code-block">
+                <pre><code>curl {{ request.url_root }}api/health</code></pre>
+            </div>
+        </div>
+
+        <div class="api-endpoint-section">
+            <h2>Error Responses</h2>
+            <p class="endpoint-description">All endpoints may return error responses with the following format:</p>
+            
+            <div class="code-block">
+                <pre><code>{
+  "error": "Error message describing what went wrong"
+}</code></pre>
+            </div>
+
+            <h3>HTTP Status Codes</h3>
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>200</code></td>
+                        <td>Success</td>
+                    </tr>
+                    <tr>
+                        <td><code>400</code></td>
+                        <td>Bad Request - Invalid parameters</td>
+                    </tr>
+                    <tr>
+                        <td><code>500</code></td>
+                        <td>Internal Server Error - Scan failed</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="api-endpoint-section">
+            <h2>Rate Limiting</h2>
+            <p>Currently no rate limits are enforced. For production deployments, consider implementing rate limiting based on your needs.</p>
+        </div>
+
+        <div class="api-endpoint-section">
+            <h2>Try It Out</h2>
+            <div class="api-tester">
+                <div class="form-group">
+                    <label>Scan Type</label>
+                    <select id="test-scan-type">
+                        <option value="deps">Dependencies</option>
+                        <option value="sast">SAST</option>
+                        <option value="net">Network</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Path</label>
+                    <input type="text" id="test-path" value="." placeholder=".">
+                </div>
+                <div class="form-group" id="test-targets-group" style="display: none;">
+                    <label>Targets</label>
+                    <input type="text" id="test-targets" placeholder="192.168.1.1">
+                </div>
+                <button class="btn-primary" onclick="testApi()">Test API</button>
+                <div id="test-result" style="margin-top: 20px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testApi() {
+    const scanType = document.getElementById('test-scan-type').value;
+    const path = document.getElementById('test-path').value;
+    const targets = document.getElementById('test-targets').value;
+    const resultDiv = document.getElementById('test-result');
+    
+    const payload = {
+        scan: scanType,
+        path: path || '.',
+        tools: 'auto'
+    };
+    
+    if (scanType === 'net' && targets) {
+        payload.targets = targets.split(',').map(t => t.trim());
+    } else if (scanType === 'all' && targets) {
+        payload.net_targets = targets.split(',').map(t => t.trim());
+    }
+    
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="loading">Running scan...</div>';
+    
+    fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        resultDiv.innerHTML = `
+            <div class="success">
+                <strong>Success!</strong> Found ${data.total_findings || 0} findings.
+                <pre style="margin-top: 10px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            </div>
+        `;
+    })
+    .catch(err => {
+        resultDiv.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+    });
+}
+
+document.getElementById('test-scan-type').addEventListener('change', (e) => {
+    const targetsGroup = document.getElementById('test-targets-group');
+    if (e.target.value === 'net' || e.target.value === 'all') {
+        targetsGroup.style.display = 'block';
+    } else {
+        targetsGroup.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
