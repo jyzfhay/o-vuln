@@ -1,0 +1,5 @@
+click>=8.0
+requests>=2.31
+rich>=13.0
+# Python < 3.11 needs tomli for pyproject.toml parsing
+tomli>=2.0; python_version < "3.11"
