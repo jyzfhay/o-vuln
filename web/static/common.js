@@ -18,9 +18,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // Storage key for reports
 const STORAGE_KEY = 'vulnscan_reports';
 
-// Generate unique ID
+// Generate unique ID (cryptographically secure)
 function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    }
+    // Fallback when crypto unavailable (e.g. old env): timestamp-based only
+    return Date.now().toString(36) + '-' + String(performance.now()).replace(/\D/g, '');
 }
 
 // Save report to localStorage
@@ -87,137 +96,180 @@ function formatRelativeTime(dateString) {
     return formatDate(dateString);
 }
 
-// Display scan results (shared function)
+// Display scan results (shared function) — uses DOM to avoid innerHTML XSS
 function displayResults(data, containerId = 'findings-container', statsContainerId = 'stats-container') {
     const statsContainer = document.getElementById(statsContainerId);
     const findingsContainer = document.getElementById(containerId);
 
     if (!statsContainer || !findingsContainer) return;
 
-    // Display stats
     const severityCounts = data.severity_counts || {};
     const total = data.total_findings || 0;
 
-    statsContainer.innerHTML = `
-        <div class="stats-grid">
-            <div class="stat-card total">
-                <div class="label">Total Findings</div>
-                <div class="value">${total}</div>
-            </div>
-            <div class="stat-card critical">
-                <div class="label">Critical</div>
-                <div class="value">${severityCounts.CRITICAL || 0}</div>
-            </div>
-            <div class="stat-card high">
-                <div class="label">High</div>
-                <div class="value">${severityCounts.HIGH || 0}</div>
-            </div>
-            <div class="stat-card medium">
-                <div class="label">Medium</div>
-                <div class="value">${severityCounts.MEDIUM || 0}</div>
-            </div>
-            <div class="stat-card low">
-                <div class="label">Low</div>
-                <div class="value">${severityCounts.LOW || 0}</div>
-            </div>
-            <div class="stat-card info">
-                <div class="label">Info</div>
-                <div class="value">${severityCounts.INFO || 0}</div>
-            </div>
-        </div>
-    `;
+    // Build stats with DOM
+    const statsGrid = document.createElement('div');
+    statsGrid.className = 'stats-grid';
+    const statCards = [
+        ['total', 'Total Findings', total],
+        ['critical', 'Critical', severityCounts.CRITICAL || 0],
+        ['high', 'High', severityCounts.HIGH || 0],
+        ['medium', 'Medium', severityCounts.MEDIUM || 0],
+        ['low', 'Low', severityCounts.LOW || 0],
+        ['info', 'Info', severityCounts.INFO || 0],
+    ];
+    statCards.forEach(([klass, label, value]) => {
+        const card = document.createElement('div');
+        card.className = 'stat-card ' + klass;
+        const labelEl = document.createElement('div');
+        labelEl.className = 'label';
+        labelEl.textContent = label;
+        const valueEl = document.createElement('div');
+        valueEl.className = 'value';
+        valueEl.textContent = String(value);
+        card.appendChild(labelEl);
+        card.appendChild(valueEl);
+        statsGrid.appendChild(card);
+    });
+    statsContainer.replaceChildren(statsGrid);
 
-    // Display findings
     const findings = data.findings || [];
-    
+    const findingsList = document.createElement('div');
+    findingsList.className = 'findings-list';
+
     if (findings.length === 0) {
-        findingsContainer.innerHTML = `
-            <div class="empty-state">
-                <h3>✓ No vulnerabilities found</h3>
-                <p>Great job! No security issues detected.</p>
-            </div>
-        `;
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        const h3 = document.createElement('h3');
+        h3.textContent = '✓ No vulnerabilities found';
+        const p = document.createElement('p');
+        p.textContent = 'Great job! No security issues detected.';
+        empty.appendChild(h3);
+        empty.appendChild(p);
+        findingsContainer.replaceChildren(empty);
         return;
     }
 
-    const scannerIcons = {
-        'dependency': '📦',
-        'sast': '🔍',
-        'network': '🌐',
-    };
+    const scannerIcons = { 'dependency': '📦', 'sast': '🔍', 'network': '🌐' };
+    findings.forEach((finding, idx) => {
+        const severity = finding.severity || 'UNKNOWN';
+        const scanner = finding.scanner || 'unknown';
+        const icon = scannerIcons[scanner] || '⚠️';
+        const location = (finding.location || 'N/A') + (finding.line_number ? ':' + finding.line_number : '');
 
-    findingsContainer.innerHTML = `
-        <div class="findings-list">
-            ${findings.map((finding, idx) => {
-                const severity = finding.severity || 'UNKNOWN';
-                const scanner = finding.scanner || 'unknown';
-                const icon = scannerIcons[scanner] || '⚠️';
-                const location = finding.location || 'N/A';
-                const lineNumber = finding.line_number ? `:${finding.line_number}` : '';
-                
-                let cveRows = '';
-                if (finding.cve_refs && finding.cve_refs.length > 0) {
-                    cveRows = `
-                        <div style="margin-top: 16px;">
-                            <h4 style="font-size: 13px; color: var(--foreground-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">CVE References</h4>
-                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <thead>
-                                    <tr style="border-bottom: 1px solid var(--border);">
-                                        <th style="text-align: left; padding: 8px; color: var(--muted-foreground); font-weight: 600;">CVE ID</th>
-                                        <th style="text-align: left; padding: 8px; color: var(--muted-foreground); font-weight: 600;">CVSS</th>
-                                        <th style="text-align: left; padding: 8px; color: var(--muted-foreground); font-weight: 600;">Severity</th>
-                                        <th style="text-align: left; padding: 8px; color: var(--muted-foreground); font-weight: 600;">Links</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${finding.cve_refs.map(cve => {
-                                        const score = cve.cvss_score ? cve.cvss_score.toFixed(1) : '—';
-                                        const links = [];
-                                        if (cve.nvd_url) links.push(`<a href="${cve.nvd_url}" target="_blank" style="color: var(--primary); text-decoration: none;">NVD</a>`);
-                                        if (cve.mitre_url) links.push(`<a href="${cve.mitre_url}" target="_blank" style="color: var(--primary); text-decoration: none;">MITRE</a>`);
-                                        return `
-                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                                <td style="padding: 8px; font-family: monospace;">${escapeHtml(cve.cve_id)}</td>
-                                                <td style="padding: 8px;">${score}</td>
-                                                <td style="padding: 8px;"><span class="badge ${cve.severity}">${cve.severity}</span></td>
-                                                <td style="padding: 8px;">${links.join(' · ')}</td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
+        const card = document.createElement('div');
+        card.className = 'finding-card';
+        card.dataset.severity = severity;
+        card.dataset.scanner = scanner;
+
+        const header = document.createElement('div');
+        header.className = 'finding-header';
+        header.onclick = () => toggleFinding(idx);
+
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + severity;
+        badge.textContent = severity;
+        const scannerBadge = document.createElement('span');
+        scannerBadge.className = 'scanner-badge';
+        scannerBadge.textContent = icon + ' ' + scanner;
+        const titleEl = document.createElement('span');
+        titleEl.className = 'finding-title';
+        titleEl.textContent = finding.title || 'Unknown';
+        const locEl = document.createElement('span');
+        locEl.className = 'finding-location';
+        locEl.textContent = location;
+        const expandIcon = document.createElement('span');
+        expandIcon.className = 'expand-icon';
+        expandIcon.id = 'icon-' + idx;
+        expandIcon.textContent = '▼';
+
+        header.append(badge, scannerBadge, titleEl, locEl, expandIcon);
+        card.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'finding-body';
+        body.id = 'body-' + idx;
+
+        if (finding.description) {
+            const desc = document.createElement('div');
+            desc.className = 'finding-description';
+            desc.textContent = finding.description;
+            body.appendChild(desc);
+        }
+        if (finding.evidence) {
+            const ev = document.createElement('div');
+            ev.className = 'finding-evidence';
+            ev.textContent = finding.evidence;
+            body.appendChild(ev);
+        }
+        if (finding.remediation) {
+            const rem = document.createElement('div');
+            rem.className = 'finding-remediation';
+            rem.textContent = '💡 ' + finding.remediation;
+            body.appendChild(rem);
+        }
+        if (finding.cve_refs && finding.cve_refs.length > 0) {
+            const cveDiv = document.createElement('div');
+            cveDiv.style.marginTop = '16px';
+            const cveH4 = document.createElement('h4');
+            cveH4.textContent = 'CVE References';
+            cveH4.style.fontSize = '13px';
+            cveH4.style.marginBottom = '8px';
+            cveDiv.appendChild(cveH4);
+            const table = document.createElement('table');
+            table.style.width = '100%';
+            table.style.fontSize = '12px';
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            ['CVE ID', 'CVSS', 'Severity', 'Links'].forEach(t => {
+                const th = document.createElement('th');
+                th.textContent = t;
+                th.style.padding = '8px';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            const tbody = document.createElement('tbody');
+            finding.cve_refs.forEach(cve => {
+                const tr = document.createElement('tr');
+                const tdId = document.createElement('td');
+                tdId.textContent = cve.cve_id;
+                tdId.style.fontFamily = 'monospace';
+                const tdScore = document.createElement('td');
+                tdScore.textContent = cve.cvss_score != null ? cve.cvss_score.toFixed(1) : '—';
+                const tdSev = document.createElement('td');
+                const sevBadge = document.createElement('span');
+                sevBadge.className = 'badge ' + cve.severity;
+                sevBadge.textContent = cve.severity;
+                tdSev.appendChild(sevBadge);
+                const tdLinks = document.createElement('td');
+                if (cve.nvd_url) {
+                    const a1 = document.createElement('a');
+                    a1.href = cve.nvd_url;
+                    a1.target = '_blank';
+                    a1.rel = 'noopener noreferrer';
+                    a1.textContent = 'NVD';
+                    tdLinks.appendChild(a1);
                 }
-
-                const evidenceHtml = finding.evidence ? `
-                    <div class="finding-evidence">${escapeHtml(finding.evidence)}</div>
-                ` : '';
-
-                const remediationHtml = finding.remediation ? `
-                    <div class="finding-remediation">💡 ${escapeHtml(finding.remediation)}</div>
-                ` : '';
-
-                return `
-                    <div class="finding-card" data-severity="${severity}" data-scanner="${scanner}">
-                        <div class="finding-header" onclick="toggleFinding(${idx})">
-                            <span class="badge ${severity}">${severity}</span>
-                            <span class="scanner-badge">${icon} ${scanner}</span>
-                            <span class="finding-title">${escapeHtml(finding.title || 'Unknown')}</span>
-                            <span class="finding-location">${escapeHtml(location)}${escapeHtml(lineNumber)}</span>
-                            <span class="expand-icon" id="icon-${idx}">▼</span>
-                        </div>
-                        <div class="finding-body" id="body-${idx}">
-                            ${finding.description ? `<div class="finding-description">${escapeHtml(finding.description)}</div>` : ''}
-                            ${evidenceHtml}
-                            ${remediationHtml}
-                            ${cveRows}
-                        </div>
-                    </div>
-                `;
-            }).join('')}
-        </div>
-    `;
+                if (cve.mitre_url) {
+                    if (cve.nvd_url) tdLinks.appendChild(document.createTextNode(' · '));
+                    const a2 = document.createElement('a');
+                    a2.href = cve.mitre_url;
+                    a2.target = '_blank';
+                    a2.rel = 'noopener noreferrer';
+                    a2.textContent = 'MITRE';
+                    tdLinks.appendChild(a2);
+                }
+                tr.append(tdId, tdScore, tdSev, tdLinks);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            cveDiv.appendChild(table);
+            body.appendChild(cveDiv);
+        }
+        card.appendChild(body);
+        findingsList.appendChild(card);
+    });
+    findingsContainer.replaceChildren(findingsList);
 }
 
 function toggleFinding(idx) {

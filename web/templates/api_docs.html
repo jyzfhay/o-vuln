@@ -341,7 +341,11 @@ function testApi() {
     }
     
     resultDiv.style.display = 'block';
-    resultDiv.innerHTML = '<div class="loading">Running scan...</div>';
+    resultDiv.replaceChildren();
+    const loading = document.createElement('div');
+    loading.className = 'loading';
+    loading.textContent = 'Running scan...';
+    resultDiv.appendChild(loading);
     
     fetch('/api/scan', {
         method: 'POST',
@@ -350,15 +354,26 @@ function testApi() {
     })
     .then(r => r.json())
     .then(data => {
-        resultDiv.innerHTML = `
-            <div class="success">
-                <strong>Success!</strong> Found ${data.total_findings || 0} findings.
-                <pre style="margin-top: 10px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
-            </div>
-        `;
+        resultDiv.replaceChildren();
+        const success = document.createElement('div');
+        success.className = 'success';
+        const strong = document.createElement('strong');
+        strong.textContent = 'Success! ';
+        success.appendChild(strong);
+        success.appendChild(document.createTextNode('Found ' + (data.total_findings || 0) + ' findings.'));
+        const pre = document.createElement('pre');
+        pre.style.marginTop = '10px';
+        pre.style.overflowX = 'auto';
+        pre.textContent = JSON.stringify(data, null, 2);
+        success.appendChild(pre);
+        resultDiv.appendChild(success);
     })
     .catch(err => {
-        resultDiv.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+        resultDiv.replaceChildren();
+        const errEl = document.createElement('div');
+        errEl.className = 'error';
+        errEl.textContent = 'Error: ' + err.message;
+        resultDiv.appendChild(errEl);
     });
 }
 

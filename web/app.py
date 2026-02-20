@@ -154,4 +154,6 @@ def save_report():
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))  # Default to 8080
-    app.run(debug=True, host='0.0.0.0', port=port)
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() in ('1', 'true', 'yes')
+    host = os.environ.get('BIND_ADDRESS', '127.0.0.1')  # Use 0.0.0.0 to allow remote access
+    app.run(debug=debug, host=host, port=port)
