@@ -1,4 +1,4 @@
-# VulnScan
+# SIQ-Scan
 
 CVE-validated vulnerability scanner — **OSV · NVD · MITRE**
 
